@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f2a56">
+<title>MK16 Digital Report</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="top"><span class="mk">MK 16</span><h1>OLTC Service Report<small>Fill the details, then download PDF or Word</small></h1></div>
+
+<main class="wrap">
+<form id="f" autocomplete="off" onsubmit="return false">
+
+<section class="card"><h2>Report</h2><div class="grid">
+  <div><label for="reference">Reference</label><input id="reference" data-k="reference" placeholder="Reference number"></div>
+  <div><label for="date">Date</label><input id="date" type="date" data-k="date"></div>
+</div></section>
+
+<section class="card"><h2>Customer</h2><div class="grid">
+  <div class="full"><label for="customer">Customer name</label><input id="customer" data-k="customer" placeholder="Customer name"></div>
+  <div><label for="contactPerson">Contact person</label><input id="contactPerson" data-k="contactPerson"></div>
+  <div><label for="contactNo">Contact no</label><input id="contactNo" data-k="contactNo" inputmode="tel"></div>
+  <div class="full"><label for="designation">Designation</label><input id="designation" data-k="designation"></div>
+  <div class="full"><label for="site1">Site</label><input id="site1" data-k="site1" placeholder="Site / location"></div>
+  <div class="full"><label for="site2">Site (second line, optional)</label><input id="site2" data-k="site2"></div>
+</div></section>
+
+<section class="card"><h2>OLTC &amp; Transformer</h2><div class="grid">
+  <div><label for="spec">OLTC specification</label><input id="spec" data-k="spec"></div>
+  <div><label for="slno">OLTC Sl.No</label><input id="slno" data-k="slno"></div>
+  <div><label for="make">Transformer make</label><input id="make" data-k="make"></div>
+  <div><label for="mva">MVA &amp; KV</label><input id="mva" data-k="mva"></div>
+  <div><label for="dInst">Date of installation</label><input id="dInst" type="date" data-k="dInst"></div>
+  <div><label for="dComm">Date of commissioning</label><input id="dComm" type="date" data-k="dComm"></div>
+</div></section>
+
+<section class="card"><h2>Description of incident</h2>
+  <textarea id="incident" data-k="incident" placeholder="Describe the incident"></textarea>
+</section>
+
+<section class="card"><h2>Service details</h2>
+  <div id="points"></div>
+  <button type="button" class="add" id="addPt">+ Add service point</button>
+  <div class="hint">Each point is printed on its own numbered line (1, 2, 3 ...). The form has room for 11 lines; more points add more lines.</div>
+</section>
+
+<section class="card"><h2>Remarks (optional)</h2>
+  <textarea id="remarks" data-k="remarks" placeholder="Anything to add at the end (printed in the blank lines at the bottom of the form)"></textarea>
+</section>
+
+<section class="card"><h2>Service engineer</h2>
+  <label for="engineer">Name (optional, printed after "Checked By Service engineer")</label>
+  <input id="engineer" data-k="engineer">
+</section>
+</form>
+</main>
+
+<div class="bar"><div class="in">
+  <button class="btn" id="bSave" type="button">Save</button>
+  <button class="btn bad" id="bReset" type="button">Reset</button>
+  <button class="btn" id="bList" type="button">Saved</button>
+  <button class="btn pri" id="bDown" type="button">Download</button>
+</div></div>
+
+<div class="ov" id="ovDown"><div class="sheet">
+  <h3>Download report</h3><p>Choose the file type. The file looks like the company MK16 format.</p>
+  <div class="choice">
+    <button type="button" class="pdf" id="gPdf"><span class="ic">📄</span>PDF<small>to share / print</small></button>
+    <button type="button" class="doc" id="gDoc"><span class="ic">📝</span>Word<small>.docx, editable</small></button>
+  </div>
+  <button type="button" class="btn" id="bPrev" style="width:100%">Preview the form first</button>
+  <div class="status" id="dlStatus"></div>
+  <button type="button" class="btn" id="dlClose" style="width:100%;margin-top:8px">Close</button>
+</div></div>
+
+<div class="ov" id="ovList"><div class="sheet">
+  <h3>Saved reports</h3><p>Saved on this phone / computer (in this browser).</p>
+  <div id="savedList"></div>
+  <button type="button" class="btn" id="listClose" style="width:100%;margin-top:6px">Close</button>
+</div></div>
+
+<div class="ov" id="ovPrev"><div class="sheet" style="max-width:720px">
+  <h3>Preview</h3><p>This is how the form will look (the real file uses the exact company font where it is installed).</p>
+  <div class="prev" id="prevBox"></div>
+  <button type="button" class="btn" id="prevClose" style="width:100%;margin-top:10px">Close preview</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script src="lib/jszip.min.js"></script>
+<script src="lib/html2canvas.min.js"></script>
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="template.js"></script>
+<script src="format.js"></script>
+<script src="paper.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
