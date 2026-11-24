@@ -155,8 +155,7 @@
     const dr = store.get('mk16.draft', null);
     if (dr && dr.data) { currentId = dr.id || null; write(Object.assign(defaults(), dr.data)); } else write(defaults());
     idb.get('draft').then((p) => { if (p && p.length && !photos.length) { photos = p; renderPhotos(); } });
-    $('#addPh').addEventListener('click', () => $('#phFile').click());
-    $('#phFile').addEventListener('change', (e) => { const fs = [...e.target.files]; e.target.value = ''; addPhotos(fs); });
+    ['#phFile', '#phCam'].forEach((id) => $(id).addEventListener('change', (e) => { const fs = [...e.target.files]; e.target.value = ''; addPhotos(fs); }));
     $$('#f [data-k]').forEach((i) => { i.addEventListener('input', draft); i.addEventListener('change', draft); });
     $('#addPt').addEventListener('click', () => { const l = read().points; l.push(''); renderPoints(l); const t = $$('#points textarea').pop(); t.focus(); draft(); });
     $('#bSave').addEventListener('click', saveReport);

@@ -56,8 +56,12 @@
 
 <section class="card"><h2>Photos (optional)</h2>
   <div id="photos"></div>
-  <button type="button" class="add" id="addPh">📷 Add photos</button>
-  <input type="file" id="phFile" accept="image/*" multiple hidden>
+  <div class="phbtns">
+    <label class="add" for="phFile">🖼 Choose from gallery</label>
+    <label class="add" for="phCam">📷 Take photo</label>
+  </div>
+  <input type="file" id="phFile" class="sr" accept="image/*" multiple>
+  <input type="file" id="phCam" class="sr" accept="image/*" capture="environment">
   <div class="hint">At the end of the report each photo is printed on its own page, as big as the page allows. You can add a short caption under a photo.</div>
 </section>
 </form>

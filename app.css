@@ -78,3 +78,8 @@ input[type=date]{min-height:46px}
 .ph .acts button{flex:1;min-height:36px;border-radius:9px;border:1.5px solid #c5d2e4;background:#fff;font:inherit;font-weight:800;cursor:pointer}
 .ph .acts .x{border-color:#f0c4c4;background:#fff5f5;color:var(--bad)}
 .ph .pn{font-size:.75rem;color:var(--mute);font-weight:700}
+
+/* the photo buttons are real <label>s of the file inputs: the phone opens the gallery / camera by itself (a script click on a hidden input is blocked on some phones) */
+.sr{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+.phbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.add{display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;margin:0;-webkit-tap-highlight-color:transparent}
