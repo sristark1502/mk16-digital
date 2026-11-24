@@ -4,12 +4,53 @@
   const today = () => { const t = new Date(), p = (n) => String(n).padStart(2, '0'); return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()); };
   const defaults = () => ({ date: today(), make: 'T&R', points: [''] });   // "T&R" is already written in the company form
   let currentId = null;
+  let photos = [];   // [{data: jpeg data-url, w, h, cap}]
 
   // browser storage can be blocked (private window): never let it break the form
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
   };
+
+  // photos live in IndexedDB (too big for localStorage); the text of the report stays in localStorage
+  const idb = {
+    db: null,
+    open() { return this.db ? Promise.resolve(this.db) : new Promise((ok, no) => { try { const r = indexedDB.open('mk16', 1); r.onupgradeneeded = () => r.result.createObjectStore('photos'); r.onsuccess = () => { this.db = r.result; ok(this.db); }; r.onerror = () => no(r.error); } catch (e) { no(e); } }); },
+    async get(k) { try { const db = await this.open(); return await new Promise((ok) => { const q = db.transaction('photos').objectStore('photos').get(k); q.onsuccess = () => ok(q.result || []); q.onerror = () => ok([]); }); } catch (e) { return []; } },
+    async set(k, v) { try { const db = await this.open(); await new Promise((ok, no) => { const t = db.transaction('photos', 'readwrite'); t.objectStore('photos').put(v, k); t.oncomplete = ok; t.onerror = () => no(t.error); }); return true; } catch (e) { return false; } },
+    async forget(k) { try { const db = await this.open(); await new Promise((ok) => { const t = db.transaction('photos', 'readwrite'); t.objectStore('photos')['delete'](k); t.oncomplete = ok; t.onerror = ok; }); } catch (e) { /* ignore */ } }
+  };
+  let phTimer;
+  const keepPhotos = () => { clearTimeout(phTimer); phTimer = setTimeout(() => idb.set('draft', photos), 400); };
+
+  // a phone photo is 3-6 MB: it is shrunk to at most 2000 px on the long side (JPEG), enough for a sharp full page
+  async function shrink(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image(); img.src = url; await img.decode();
+      const s = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight)), w = Math.round(img.naturalWidth * s), h = Math.round(img.naturalHeight * s);
+      const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
+      return { data: c.toDataURL('image/jpeg', 0.85), w, h, cap: '' };
+    } finally { URL.revokeObjectURL(url); }
+  }
+  function renderPhotos() {
+    const box = $('#photos'); box.innerHTML = '';
+    photos.forEach((p, i) => {
+      const row = document.createElement('div'); row.className = 'ph';
+      row.innerHTML = '<img alt=""><div class="side"><div class="pn"></div><input placeholder="Caption (optional)"><div class="acts"><button type="button" class="up" aria-label="Move up">↑</button><button type="button" class="dn" aria-label="Move down">↓</button><button type="button" class="x" aria-label="Remove photo">Remove</button></div></div>';
+      row.querySelector('img').src = p.data; row.querySelector('.pn').textContent = 'Photo ' + (i + 1) + ' (own page after the form)';
+      const cap = row.querySelector('input'); cap.value = p.cap || ''; cap.addEventListener('input', () => { p.cap = cap.value; keepPhotos(); });
+      const move = (d) => { const j = i + d; if (j < 0 || j >= photos.length) return; [photos[i], photos[j]] = [photos[j], photos[i]]; renderPhotos(); keepPhotos(); };
+      row.querySelector('.up').addEventListener('click', () => move(-1)); row.querySelector('.dn').addEventListener('click', () => move(1));
+      row.querySelector('.x').addEventListener('click', () => { photos.splice(i, 1); renderPhotos(); keepPhotos(); });
+      box.appendChild(row);
+    });
+  }
+  async function addPhotos(files) {
+    let bad = 0;
+    for (const f of files) { try { photos.push(await shrink(f)); renderPhotos(); } catch (e) { bad++; } }
+    keepPhotos(); if (bad) toast(bad + ' photo(s) could not be read');
+  }
 
   /* ---------- form <-> data ---------- */
   function read() {
@@ -59,11 +100,12 @@
     const i = list.findIndex((x) => x.id === rec.id);
     if (i >= 0) list[i] = rec; else list.unshift(rec);
     currentId = rec.id;
+    idb.set('save:' + rec.id, photos);
     if (store.set('mk16.saves', list)) { draft(); toast('Saved ✓  (' + rec.title + ')'); } else toast('Could not save in this browser');
   }
   function resetForm() {
     if (!confirm('Clear everything and start a new report?')) return;
-    currentId = null; write(defaults()); draft(); window.scrollTo({ top: 0, behavior: 'smooth' }); toast('New blank report');
+    currentId = null; photos = []; renderPhotos(); idb.forget('draft'); write(defaults()); draft(); window.scrollTo({ top: 0, behavior: 'smooth' }); toast('New blank report');
   }
   function renderSaved() {
     const box = $('#savedList'), list = store.get('mk16.saves', []);
@@ -74,8 +116,8 @@
       const when = new Date(r.savedAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
       row.innerHTML = '<div class="t"><b></b><small>Saved ' + when + '</small></div><button class="btn ok" type="button">Open</button><button class="btn bad" type="button">Delete</button>';
       row.querySelector('b').textContent = r.title;
-      row.querySelector('.ok').addEventListener('click', () => { currentId = r.id; write(r.data); draft(); close('#ovList'); window.scrollTo({ top: 0 }); toast('Opened: ' + r.title); });
-      row.querySelector('.bad').addEventListener('click', () => { if (!confirm('Delete "' + r.title + '"?')) return; store.set('mk16.saves', store.get('mk16.saves', []).filter((x) => x.id !== r.id)); if (currentId === r.id) currentId = null; renderSaved(); });
+      row.querySelector('.ok').addEventListener('click', async () => { currentId = r.id; write(r.data); photos = await idb.get('save:' + r.id); renderPhotos(); draft(); keepPhotos(); close('#ovList'); window.scrollTo({ top: 0 }); toast('Opened: ' + r.title); });
+      row.querySelector('.bad').addEventListener('click', () => { if (!confirm('Delete "' + r.title + '"?')) return; store.set('mk16.saves', store.get('mk16.saves', []).filter((x) => x.id !== r.id)); idb.forget('save:' + r.id); if (currentId === r.id) currentId = null; renderSaved(); });
       box.appendChild(row);
     });
   }
@@ -83,7 +125,7 @@
   /* ---------- download ---------- */
   async function download(kind) {
     const st = $('#dlStatus'), btns = $$('#ovDown button'); btns.forEach((b) => { b.disabled = true; });
-    const d = read();
+    const d = Object.assign(read(), { photos });
     try {
       st.textContent = kind === 'pdf' ? 'Making the PDF…' : 'Making the Word file…';
       if (kind === 'pdf') save(await MK16Paper.buildPdf(d), fileBase(d) + '.pdf');
@@ -98,7 +140,8 @@
   async function preview() {
     const box = $('#prevBox'); box.innerHTML = ''; open('#ovPrev');
     await MK16Paper.fontsReady();
-    const papers = MK16Paper.buildPapers(read(), box);
+    const dd = Object.assign(read(), { photos });
+    const papers = MK16Paper.buildPapers(dd, box).concat(photos.map((p) => { const e = MK16Paper.photoPaper(p); box.appendChild(e); return e; }));
     const s = Math.min(1, (box.clientWidth - 16) / (612 * 96 / 72));
     papers.forEach((p) => {
       const w = document.createElement('div'); w.className = 'pwrap';
@@ -111,6 +154,9 @@
   document.addEventListener('DOMContentLoaded', () => {
     const dr = store.get('mk16.draft', null);
     if (dr && dr.data) { currentId = dr.id || null; write(Object.assign(defaults(), dr.data)); } else write(defaults());
+    idb.get('draft').then((p) => { if (p && p.length && !photos.length) { photos = p; renderPhotos(); } });
+    $('#addPh').addEventListener('click', () => $('#phFile').click());
+    $('#phFile').addEventListener('change', (e) => { const fs = [...e.target.files]; e.target.value = ''; addPhotos(fs); });
     $$('#f [data-k]').forEach((i) => { i.addEventListener('input', draft); i.addEventListener('change', draft); });
     $('#addPt').addEventListener('click', () => { const l = read().points; l.push(''); renderPoints(l); const t = $$('#points textarea').pop(); t.focus(); draft(); });
     $('#bSave').addEventListener('click', saveReport);

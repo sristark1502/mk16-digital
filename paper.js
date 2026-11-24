@@ -80,6 +80,18 @@
     return out;
   }
 
+  // one page with one photo (header, the photo as big as the box allows, the optional caption)
+  function photoPaper(ph, overlayOnly) {
+    const f = MK16.photoFit(ph), B = MK16.PHOTO;
+    const { paper } = paperShell(0); paper.removeChild(paper.querySelector('.mktable'));
+    if (overlayOnly) paper.style.background = 'transparent';
+    const left = (PAGE_W - f.w) / 2;
+    if (!overlayOnly) { const im = document.createElement('img'); im.src = ph.data; im.alt = ''; im.style.cssText = 'position:absolute;left:' + left + 'pt;top:' + B.y + 'pt;width:' + f.w + 'pt;height:' + f.h + 'pt'; paper.appendChild(im); }
+    const cap = (ph.cap || '').trim();
+    if (cap) { const c = el('div', 'mkcap', cap); c.style.top = (B.y + f.h + 8) + 'pt'; paper.appendChild(c); }
+    return paper;
+  }
+
   async function fontsReady() {
     try { await document.fonts.load('10pt "Bahnschrift SemiBold"'); await document.fonts.load('700 10pt "MK Fallback"'); await document.fonts.load('400 10pt "MK Fallback"'); await document.fonts.ready; } catch (e) { /* fonts are best effort */ }
   }
@@ -96,9 +108,19 @@
         if (i) pdf.addPage('letter', 'portrait');
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, PAGE_W, PAGE_H, undefined, 'FAST');
       }
+      // photos: one page each, the photo itself is placed as it is (sharp), only the header and the caption are drawn over it
+      for (const ph of (d.photos || [])) {
+        pdf.addPage('letter', 'portrait');
+        const f = MK16.photoFit(ph);
+        pdf.addImage(ph.data, 'JPEG', (PAGE_W - f.w) / 2, MK16.PHOTO.y, f.w, f.h, undefined, 'FAST');
+        const ov = photoPaper(ph, true); host.appendChild(ov);
+        const c = await html2canvas(ov, { scale: 2, backgroundColor: null, logging: false, width: PAGE_W * PX, height: PAGE_H * PX, windowWidth: 1400 });
+        pdf.addImage(c.toDataURL('image/png'), 'PNG', 0, 0, PAGE_W, PAGE_H, undefined, 'FAST');
+        ov.remove();
+      }
       return pdf.output('blob');
     } finally { host.remove(); }
   }
 
-  window.MK16Paper = { buildPapers, buildPdf, fontsReady, PAGE_W, PAGE_H };
+  window.MK16Paper = { buildPapers, buildPdf, fontsReady, photoPaper, PAGE_W, PAGE_H };
 })();

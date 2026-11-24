@@ -65,20 +65,49 @@
     const pPr = '<w:pPr><w:pStyle w:val="9"/>' + (c.tabs ? '<w:tabs>' + c.tabs.map((p) => '<w:tab w:val="left" w:pos="' + p + '"/>').join('') + '</w:tabs>' : '') + (c.before ? '<w:spacing w:before="' + c.before + '"/>' : '') + (c.center ? '<w:jc w:val="center"/>' : '') + rpr(c.bold || c.center) + '</w:pPr>';
     return '<w:tc>' + tcPr + '<w:p>' + pPr + c.runs.map((r) => runXml(r, c.bold)).join('') + '</w:p></w:tc>';
   }
-  function documentXml(d) {
+  function documentXml(d, extra) {
     const T0 = window.MK16_TPL;
     const body = rows(d).map((r) => '<w:tr>' + T0.pex + '<w:trPr><w:trHeight w:val="' + r.h + '" w:hRule="atLeast"/></w:trPr>' + r.cells.map(cellXml).join('') + '</w:tr>').join('');
     // the closing paragraph of the company file: "Checked By Service engineer" (+ the engineer's name when typed)
     let tail = T0.tail;
     const name = d && d.engineer && d.engineer.trim();
     if (name) tail = tail.replace('<w:bookmarkStart', '<w:r>' + rpr(true) + '<w:t xml:space="preserve"> : ' + esc(name) + '</w:t></w:r><w:bookmarkStart');
+    if (extra) tail = tail.replace('<w:sectPr>', extra + '<w:sectPr>');
     return T0.head + body + '</w:tbl>' + tail;
   }
+  /* ---- photos: every photo on its own page, as big as the page allows (same box in the PDF) ---- */
+  const PHOTO = { x: 62.5, y: 70, w: 500, h: 640 };          // pt: where a photo may go on its page
+  const photoFit = (p) => { const s = Math.min(PHOTO.w / p.w, PHOTO.h / p.h); return { w: p.w * s, h: p.h * s }; };
+  const EMU = (pt) => Math.round(pt * 12700);
+  function photoXml(p, rid, n) {
+    const f = photoFit(p), cx = EMU(f.w), cy = EMU(f.h);
+    const pic = '<w:p><w:pPr><w:pageBreakBefore/><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="' + cx + '" cy="' + cy + '"/><wp:docPr id="' + (100 + n) + '" name="Photo ' + n + '"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="' + (100 + n) + '" name="photo' + n + '.jpg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="' + rid + '"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+    const cap = (p.cap || '').trim();
+    return pic + (cap ? '<w:p><w:pPr><w:pStyle w:val="9"/><w:spacing w:before="120"/><w:jc w:val="center"/>' + rpr(false) + '</w:pPr>' + runXml({ t: cap, b: false }, false) + '</w:p>' : '');
+  }
+  const bytesOf = (url) => { const s = atob(String(url).split(',')[1] || ''), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
+
   async function buildDocx(d) {
     const zip = await JSZip.loadAsync(window.MK16_TPL.rest, { base64: true });
-    zip.file('word/document.xml', documentXml(d));
+    const photos = (d && d.photos) || [];
+    let extra = '';
+    if (photos.length) {
+      let rels = '';
+      photos.forEach((p, i) => {
+        const n = i + 1, rid = 'rIdPhoto' + n;
+        zip.file('word/media/photo' + n + '.jpg', bytesOf(p.data), { binary: true });
+        rels += '<Relationship Id="' + rid + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/photo' + n + '.jpg"/>';
+        extra += photoXml(p, rid, n);
+      });
+      const rp = 'word/_rels/document.xml.rels';
+      zip.file(rp, (await zip.file(rp).async('string')).replace('</Relationships>', rels + '</Relationships>'));
+      let ct = await zip.file('[Content_Types].xml').async('string');
+      if (!/Extension="jpg"/i.test(ct)) ct = ct.replace('<Default Extension="xml"', '<Default Extension="jpg" ContentType="image/jpeg"/><Default Extension="xml"');
+      zip.file('[Content_Types].xml', ct);
+    }
+    zip.file('word/document.xml', documentXml(d, extra));
     return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression: 'DEFLATE' });
   }
 
-  window.MK16 = { COLS, W, rows, tailText, fmtDate, buildDocx, documentXml, MIN_POINTS };
+  window.MK16 = { COLS, W, rows, tailText, fmtDate, buildDocx, documentXml, MIN_POINTS, PHOTO, photoFit };
 })();

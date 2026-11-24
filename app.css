@@ -66,3 +66,15 @@ input[type=date]{min-height:46px}
 .paper .b{font-weight:700}
 .mktail{position:absolute;left:58.5pt;font-weight:700;white-space:pre;margin-top:1.5pt}
 .pdfhost{position:fixed;left:-30000px;top:0;width:900px}
+
+.mkcap{position:absolute;left:58.5pt;right:45pt;text-align:center;white-space:pre-wrap;font-weight:400}
+.paper img{display:block}
+/* photos in the form */
+.ph{display:grid;grid-template-columns:84px 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:12px;padding:8px;margin-bottom:10px}
+.ph img{width:84px;height:84px;object-fit:cover;border-radius:8px;background:#e5ebf4}
+.ph .side{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ph .side input{min-height:40px;padding:8px 10px;font-size:.9rem}
+.ph .acts{display:flex;gap:6px}
+.ph .acts button{flex:1;min-height:36px;border-radius:9px;border:1.5px solid #c5d2e4;background:#fff;font:inherit;font-weight:800;cursor:pointer}
+.ph .acts .x{border-color:#f0c4c4;background:#fff5f5;color:var(--bad)}
+.ph .pn{font-size:.75rem;color:var(--mute);font-weight:700}
