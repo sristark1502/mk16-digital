@@ -22,7 +22,7 @@
     const row = (h, cells) => R.push({ h, cells });
     row(382, [cell(W.full, 4, [T('OLTC Service Report', 1)], { center: 1 })]);
     row(382, [cell(W.full, 4, [T('EMR Tap Changers (p) Ltd', 1)], { center: 1 })]);
-    row(382, [cell(W.full, 4, [T('Reference : ' + (d.reference || ''), 1), TAB, T('Date : ' + fmtDate(d.date), 1)], { tabs: [TAB_DATE], bold: 1 })]);
+    row(382, [cell(W.full, 4, [T('Reference :', 1), TAB, T('Date : ' + fmtDate(d.date), 1)], { tabs: [TAB_DATE], bold: 1 })]);
     row(382, [cell(W.full, 4, [T('Customer name : ' + (d.customer || ''))])]);
     row(611, [
       cell(W.c1, 1, [T('Contact Person: ' + (d.contactPerson || ''))], { before: 240 }),

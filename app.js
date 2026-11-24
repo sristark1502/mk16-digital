@@ -1,6 +1,6 @@
 (function () {
   const $ = (s, r) => (r || document).querySelector(s), $$ = (s, r) => [...(r || document).querySelectorAll(s)];
-  const KEYS = ['reference', 'date', 'customer', 'contactPerson', 'contactNo', 'designation', 'site1', 'site2', 'spec', 'slno', 'make', 'mva', 'dInst', 'dComm', 'incident', 'remarks', 'engineer'];
+  const KEYS = ['date', 'customer', 'contactPerson', 'contactNo', 'designation', 'site1', 'site2', 'spec', 'slno', 'make', 'mva', 'dInst', 'dComm', 'incident', 'remarks', 'engineer'];
   const today = () => { const t = new Date(), p = (n) => String(n).padStart(2, '0'); return t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()); };
   const defaults = () => ({ date: today(), make: 'T&R', points: [''] });   // "T&R" is already written in the company form
   let currentId = null;
@@ -44,7 +44,7 @@
   const open = (id) => $(id).classList.add('on'), close = (id) => $(id).classList.remove('on');
   function fileBase(d) {
     const clean = (s) => String(s || '').replace(/[^\w\-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
-    return 'MK16_' + (clean(d.customer) || clean(d.reference) || 'report') + '_' + (d.date || today());
+    return 'MK16_' + (clean(d.customer) || 'report') + '_' + (d.date || today());
   }
   function save(blob, name) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
@@ -52,7 +52,7 @@
   }
 
   /* ---------- save / reset / saved list ---------- */
-  function title(d) { return [d.reference, d.customer].filter(Boolean).join(' · ') || 'Untitled report'; }
+  function title(d) { return [d.customer, d.site1].filter(Boolean).join(' · ') || 'Untitled report'; }
   function saveReport() {
     const d = read(), list = store.get('mk16.saves', []);
     const rec = { id: currentId || ('r' + Date.now()), title: title(d), savedAt: Date.now(), data: d };
